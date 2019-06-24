@@ -21,6 +21,14 @@ class Tesseract < Formula
   
     depends_on "leptonica"
     depends_on "libtiff"
+
+    # training-tools dependancies
+    depends_on "libtool" => :build
+    depends_on "icu4c"
+    depends_on "glib"
+    depends_on "cairo"
+    depends_on "pango"
+    depends_on :x11
   
     resource "eng" do
       url "https://github.com/tesseract-ocr/tessdata_fast/raw/4.0.0/eng.traineddata"
@@ -43,6 +51,11 @@ class Tesseract < Formula
     end
   
     def install
+      # for training-tools
+      icu4c = Formula["icu4c"]
+      ENV.append "CFLAGS", "-I#{icu4c.opt_include}"
+      ENV.append "LDFLAGS", "-L#{icu4c.opt_lib}"
+
       # explicitly state leptonica header location, as the makefile defaults to /usr/local/include,
       # which doesn't work for non-default homebrew location
       ENV["LIBLEPT_HEADERSDIR"] = HOMEBREW_PREFIX/"include"
@@ -56,6 +69,12 @@ class Tesseract < Formula
   
       # make install in the local share folder to avoid permission errors
       system "make", "install", "datarootdir=#{share}"
+
+      # make training tools
+      system "make", "training"
+
+      # install training tools
+      system "make", "install", "training-install", "datarootdir=#{share}"
   
       resource("snum").stage { mv "snum.traineddata", share/"tessdata" }
       resource("eng").stage { mv "eng.traineddata", share/"tessdata" }
